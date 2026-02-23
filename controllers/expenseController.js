@@ -49,26 +49,40 @@ const deleteExpense = async (req, res) => {
 }
 
 const downloadExpenseExcel = async (req, res) => {
-    const userId = req.user.id
-    try {
-        const expense = await Expense.find({ userId }).sort({ date: -1 })
+    const userId = req.user.id;
 
-        //preapre data for excel
+    try {
+        const expense = await Expense.find({ userId }).sort({ date: -1 });
+
         const data = expense.map((item) => ({
             Category: item.category,
             Amount: item.amount,
-            Date: item.date
+            Date: item.date,
         }));
 
         const wb = xlsx.utils.book_new();
-        const ws = xlsx.utils.json_to_sheet(data)
-        xlsx.utils.book_append_sheet(wb, ws, "Expense")
-        xlsx.writeFile(wb, "expense_details.xlsx");
-        res.download("expense_details.xlsx")
+        const ws = xlsx.utils.json_to_sheet(data);
+        xlsx.utils.book_append_sheet(wb, ws, "Expense");
+
+        // convert workbook to buffer
+        const buffer = xlsx.write(wb, { type: "buffer", bookType: "xlsx" });
+
+        res.setHeader(
+            "Content-Type",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        );
+
+        res.setHeader(
+            "Content-Disposition",
+            "attachment; filename=expense_details.xlsx"
+        );
+
+        res.send(buffer);
+
     } catch (err) {
-        res.status(500).json({ message: err.message })
+        res.status(500).json({ message: err.message });
     }
-}
+};
 
 module.exports = {
     addExpense,
